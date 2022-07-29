@@ -10,28 +10,28 @@ const dbo = require('../db/conn');
 
 // [
 //   { "_id": 1, "name": "apples", "qty": 5, "rating": 3 },
-//   { "_id": 2, "name": "bananas", "qty": 7, "rating": 1, "microsieverts": 0.1 },
+//   { "_id": 2, "name": "bananas", "qty": 7, "rating": 1},
 //   { "_id": 3, "name": "oranges", "qty": 6, "rating": 2 },
 //   { "_id": 4, "name": "avocados", "qty": 3, "rating": 5 },
 // ]
 
-recordRoutes.route('/fruits/index').get(function (req, res) {
-  const dbConnect = dbo.getDb();
-  res.send(dbConnect
-    .collection('fruits').indexes())
-  });
+// recordRoutes.route('/fruits/index').get(function (req, res) {
+//   const dbConnect = dbo.getDb();
+//   res.send(dbConnect
+//     .collection('fruits').indexes())
+//   });
 
 // This section will help you create a new record.
-recordRoutes.route('/fruits').post(function (req, res) {
+recordRoutes.route('/fruits').post(function async(req, res) {
   const dbConnect = dbo.getDb();
-
   dbConnect
     .collection('fruits')
     .insertMany([
-      {  "name": "bananas", "qty": 7, "rating": 1, "microsieverts": 0.1 },
-      {  "name": "oranges", "qty": 6, "rating": 2 },
-      {  "name": "avocados", "qty": 3, "rating": 5 },
-    ], function (err, result) {
+        {  "name": "apples", "qty": 5, "rating": 3 },
+        {  "name": "mangos", "qty": 8, "rating": 6 },
+        {  "name": "avocados", "qty": 3, "rating": 5 },
+      ]
+    , function (err, result) {
       if (err) {
         res.send('Error inserting matches!');
       } else {
@@ -47,47 +47,7 @@ recordRoutes.route('/fruits').get(function (req, res) {
 
   dbConnect
     .collection('fruits')
-    .find({
-      $and: [
-         { rating: { $eq: 6 }},
-         { qty: { $gte: 3 }}
-      ]
-    })
-    .toArray(function (err, result) {
-      if (err) {
-        res.status(400).send("Error fetching listings!");
-     } else {
-        res.json(result);
-      }
-    });
-});
-
-recordRoutes.route('/fruits/aggre').get(function (req, res) {
-  const dbConnect = dbo.getDb();
-
-  dbConnect
-    .collection('fruits')
-     .aggregate( [
-      {
-         $match:
-         {}
-      },
-      {
-        $sort: { qty: -1 }
-      },
-      {
-        $project:{
-          _id:0,
-          qty:1,
-          name:1,
-          rating:1,
-          id:'$_id'
-        }
-      }
-  
-    ] )
-   
-    .toArray(function (err, result) {
+    .find({}).limit(2).toArray(function (err, result) {
       if (err) {
         res.status(400).send("Error fetching listings!");
      } else {
@@ -126,10 +86,12 @@ recordRoutes.route("/fruits/updateRating").post(function (req, res) {
         res.status(400).send(`Error updating rating!`);
       } else {
         console.log("1 document updated");
+        res.send("1 document updated")
       }
     });
 });
  
+
 recordRoutes.route("/listings/delete/:name").delete((req, res) => {
   const dbConnect = dbo.getDb();
   console.log(req.params.name)
@@ -137,13 +99,69 @@ recordRoutes.route("/listings/delete/:name").delete((req, res) => {
 
   dbConnect
     .collection("fruits")
-    .delete(listingQuery, function (err, _result) {
+    .deleteOne(listingQuery, function (err, _result) {
       if (err) {
         res.status(400).send(`Error deleting !`);
       } else {
         console.log("1 document deleted");
+        res.send( _result)
       }
     });
 });
+
+recordRoutes.route('/fruits/aggre').get(function (req, res) {
+  const dbConnect = dbo.getDb();
+
+  dbConnect
+    .collection('fruits')
+     .aggregate( [
+      {
+         $match:
+         {qty: {$gt:0}}
+      },
+      {
+        $group: {_id:"$name", total:{$sum:"$rating"}}
+      }
+  
+    ] )
+   
+    .toArray(function (err, result) {
+      if (err) {
+        res.status(400).send("Error fetching listings!");
+     } else {
+        res.json(result);
+      }
+    });
+});
+ 
+
+
+
+// await coll.bulkWrite([
+//   {
+//     insertOne: {
+//       document: {
+//         title: 'A New Movie',
+//         year: 2022
+//       }
+//     }
+//   },
+//   {
+//     deleteMany: {
+//       filter: { year: { $lt: 1970 } }
+//     }
+//   }
+// ]);
+
+// {
+//   $lookup:
+//     {
+//       from: <collection to join>,
+//       localField: <field from the input documents>,
+//       foreignField: <field from the documents of the "from" collection>,
+//       as: <output array field>
+//     }
+// }
+
 
 module.exports = recordRoutes;
